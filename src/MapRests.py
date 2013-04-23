@@ -1,9 +1,18 @@
 '''
-Script to:
-1) scrape the Western New York Local Restaurant Week page (http://localrestaurantweek.com/), and 
-2) generate a csv file suitable for upload to batchgeo 
+This is a script to
+1) Get a page with a table of Local Restaurant Week participating restaurants from the restaurants page at http://localrestaurantweek.com/restaurants.html
+2) Extract the names and addresses of participating restaurants
+3) Generate a csv file suitable for upload to http://batchgeo.com 
 
-Example result from 2012: http://batchgeo.com/map/856e9cc67cdfa537cf0cdb953ba8443d
+The result is a map of restaurants participating in the Western New York Local Restaurant Week
+Example result from 2013: http://tinyurl.com/LRW2013
+
+
+Example usage:
+python -i MapRests.py
+> dump_csv(process_table(get_soup("http://localrestaurantweek.com/restaurants.html")),"./maprest.csv")
+
+
 
 @author: jonathanbona
 '''
@@ -23,20 +32,30 @@ def get_soup(url):
 
 def rest_row(r):
     """Given a row from the restaurants table, return a dict for that restaurant in case this row contains one"""
-    # restaurant rows in the table have <a> with no style; neighborhood headers have styled <a>s; the table header has no <a>
+    # restaurant rows in the table have <a> with no style; 
+    # neighborhood headers have styled <a>s; 
+    # X the table header has no <a> --NOT ANY LONGER, NOW IT DOES have links for sorting. 
+    #    the fix for this in process_table cuts out first row
     a = r.find('a',attrs={'style' : None}) 
     if not a: return None
     tds =  r.find_all('td')
-    return {'street' : tds[0].text.split('\t')[1].lstrip().strip(), 
+
+
+    # sometimes - e.g. on 4/21 for Pizza Plant - there's no address -- use blank address & fix manually
+    st = tds[0].text.split('\t')[1].lstrip().strip() if len(tds[0].text.split('\t')) > 1 else ''
+    
+    return {'street' : st,
             'city' : tds[1].text.strip(),
             'cuisine' : tds[2].text.strip(),
             'name' : a.text.strip(),
-            'link' : a['href']}
+            'link' : a['href'].split('&')[0]}
+
 
 def process_table(soup):
     """Given the beautifulsoup for the restaurants page, returns a list of dicts, one per restaurant, with key info"""
     rests = []
-    for r in soup.find('table',attrs={"id" : "rest_list"}).find_all('tr'):
+    rows = soup.find('table',attrs={"id" : "rest_list"}).find_all('tr')
+    for r in rows[1:len(rows)]:
         rdict = rest_row(r)
         if rdict:
             rests.append(rdict)
@@ -52,10 +71,8 @@ def dump_csv(rdl, fname='maprest.csv'):
         restwriter.writerow(['Address', 'City', 'State','Zipcode','Name','Phone Number','Group','URL','Email']);
         # write the results
         for res in rdl:
-            restwriter.writerow([res['street'],res['city'],'NY', '',res['name'],'','','http://localrestaurantweek.com/'+res['link'],'']);
-    
+            restwriter.writerow([res['street'].encode('utf8'),res['city'].encode('utf8'),'NY', '',res['name'].encode('utf8'),'','','http://localrestaurantweek.com/'+res['link'].encode('utf8'),'']);
 
-#dump_csv(process_table(get_soup("http://localrestaurantweek.com/restaurants.cfm")),"./maprest.csv") # example usage
     
 if __name__ == '__main__':
     pass
