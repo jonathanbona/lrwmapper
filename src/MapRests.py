@@ -34,8 +34,6 @@ def rest_row(r):
     """Given a row from the restaurants table, return a dict for that restaurant in case this row contains one"""
     # restaurant rows in the table have <a> with no style; 
     # neighborhood headers have styled <a>s; 
-    # X the table header has no <a> --NOT ANY LONGER, NOW IT DOES have links for sorting. 
-    #    the fix for this in process_table cuts out first row
     a = r.find('a',attrs={'style' : None}) 
     if not a: return None
     tds =  r.find_all('td')
